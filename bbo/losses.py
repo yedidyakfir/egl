@@ -1,0 +1,64 @@
+from typing import Callable
+
+import torch
+from torch import Tensor
+from torch.nn import Module
+
+
+class GradientLoss(Module):
+    def __init__(self, grad_network, ball_perturb_size, calc_loss):
+        super().__init__()
+        self.grad_network = grad_network
+        self.ball_perturb_size = ball_perturb_size
+        self.calc_loss = calc_loss
+
+    def forward(self, x_i, x_j, y_i, y_j):
+        assert len(x_i.shape) <= 2, "Cant handle multiple batches yet"
+        grad_on_perturb = self.grad_network(x_i)
+
+        x_delta = x_j - x_i
+        value = (x_delta * grad_on_perturb).sum(dim=1) + self.taylor_remainder(x_delta)
+        target = y_j - y_i
+
+        return self.calc_loss(value, target)
+
+    def taylor_remainder(self, x_delta):
+        return 0
+
+
+class NaturalHessianLoss(GradientLoss):
+    def calculate_hessian(self, x):
+        return hessian_from_gradient_network(self.grad_network, x)
+
+    def taylor_remainder(self, x_delta):
+        hessian = self.calculate_hessian(x_delta)
+        return torch.bmm(
+            torch.bmm(
+                x_delta.reshape((x_delta.shape[0], 1, x_delta.shape[1])), hessian
+            ),
+            x_delta.reshape((x_delta.shape[0], x_delta.shape[1], 1)),
+        ).squeeze()
+
+
+class HessianWithDifferentNetwork(NaturalHessianLoss):
+    def __init__(self, *args, hessian_network, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.hessian_network = hessian_network
+
+    def calculate_hessian(self, x):
+        return self.hessian_network(x)
+
+
+def loss_with_quantile(
+    value: Tensor,
+    target: Tensor,
+    quantile: int,
+    weights_creator: WeightsDistributionBase,
+    loss: Callable,
+) -> Tensor:
+    smallest_element = (value - target).abs().clone().detach()
+    weights = weights_creator.distribute_weights(smallest_element, quantile)
+
+    loss = loss(value, target)
+    loss = (loss * weights).mean()
+    return loss
