@@ -1,9 +1,4 @@
-import math
-from logging import Logger
-from typing import List
-
-import torch
-from datasets import Dataset
+from torch.utils.data import Dataset
 from torch import Tensor
 from torch.nn import Module
 from torch.optim import Optimizer
@@ -29,18 +24,7 @@ def train_gradient_network(
         optimizer.step()
 
 
-def step_model_with_gradient(model, gradient: Tensor, optimizer: Optimizer):
+def step_model_with_gradient(point: Tensor, gradient: Tensor, optimizer: Optimizer):
     optimizer.zero_grad()
-    gradient_index = 0
-    for layer in model.children():
-        for model_parameter in layer.parameters():
-            gradient_offset = model_parameter.numel()
-            parameter_gradient = (
-                gradient[gradient_index : gradient_index + gradient_offset]
-                .reshape(model_parameter.shape)
-                .clone()
-            )
-            with torch.no_grad():
-                model_parameter.grad = parameter_gradient
-            gradient_index += gradient_offset
+    point.grad = gradient
     optimizer.step()

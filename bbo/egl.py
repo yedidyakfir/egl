@@ -1,12 +1,14 @@
+import torch
 from typing import Callable, Type
 
-from datasets import Dataset
+from torch.utils.data import Dataset
 from torch import Tensor
 from torch.nn import Module
 from torch.optim import Optimizer
 
 from bbo.convergence import ConvergenceAlgorithm
-from bbo.trainer import train_gradient_network
+from bbo.losses import GradientLoss
+from bbo.trainer import train_gradient_network, step_model_with_gradient
 
 
 class EGL(ConvergenceAlgorithm):
@@ -19,7 +21,6 @@ class EGL(ConvergenceAlgorithm):
         num_of_minibatch_to_train: int,
         database_type: Type[Dataset],
         dataset_parameters: dict,
-        taylor_loss: Callable,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -57,25 +58,17 @@ class EGL(ConvergenceAlgorithm):
         return self.grad_loss(value, target)
 
     def train_model(self):
-        self.model_to_train.train()
-        self.grad_optimizer.zero_grad()
+        self.gradient_optimizer.zero_grad()
         self.grad_network.eval()
 
-        model_to_train_gradient = self.grad_network(
-            self.model_to_train.model_parameter_tensor()
-        )
-        # model_to_train_gradient = self.env.g_func(curr_point)
-        self.logger.info(f"Gradient: {model_to_train_gradient}")
-        model_to_train_gradient = model_to_train_gradient.to(device=self.device)
+        curr_point_gradient = self.gradient(self.curr_point)
         self.logger.info(
             f"Algorithm {self.__class__.__name__} "
-            f"moving Gradient size: {torch.norm(model_to_train_gradient)} on {self.env}"
+            f"moving Gradient size: {torch.norm(curr_point_gradient)} on {self.env}"
         )
-
         step_model_with_gradient(
-            self.model_to_train, model_to_train_gradient, self.model_to_train_optimizer
+            self.curr_point, curr_point_gradient, self.function_opt
         )
-        self.model_to_train.eval()
 
     def gradient(self, x) -> Tensor:
         training = self.grad_network.training
