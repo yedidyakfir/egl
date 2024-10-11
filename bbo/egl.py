@@ -9,6 +9,7 @@ from torch.optim import Optimizer
 from bbo.convergence import ConvergenceAlgorithm
 from bbo.losses import GradientLoss
 from bbo.trainer import train_gradient_network, step_model_with_gradient
+from bbo.utils import reset_all_weights
 
 
 class EGL(ConvergenceAlgorithm):
@@ -77,3 +78,7 @@ class EGL(ConvergenceAlgorithm):
         self.grad_network.train(training)
         model_to_train_gradient[model_to_train_gradient != model_to_train_gradient] = 0
         return model_to_train_gradient
+
+    def after_shrinking_hook(self):
+        reset_all_weights(self.grad_network)
+

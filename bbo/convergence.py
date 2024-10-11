@@ -10,8 +10,12 @@ from torch import Tensor
 from torch.optim import Optimizer
 from tqdm.auto import trange
 
+from bbo.exception import NoMoreBudgetError, AlgorithmFinished
 from bbo.function import Function
+from bbo.handlers import AlgorithmCallbackHandler
+from bbo.stop_condition import AlgorithmStopCondition
 from bbo.trust_region import TrustRegion
+from bbo.utils import distance_between_tensors
 from bbo.value_normalizer import ValueNormalizer
 
 
@@ -76,7 +80,6 @@ class ConvergenceAlgorithm:
         exploration_size: int,
         num_loop_without_improvement: int,
         min_iteration_before_shrink: int,
-        max_num_of_shrink: int = None,
         surrogate_model_training_epochs: int = 60,
         warmup_minibatch: int = 5,
         warmup_loops: int = 6,
@@ -90,9 +93,6 @@ class ConvergenceAlgorithm:
         stopping_conditions = stopping_conditions or []
         callback_handlers = callback_handlers or []
 
-        if max_num_of_shrink:
-            stopping_conditions.append(StopAfterXTimes(max_num_of_shrink))
-
         for callback_handler in callback_handlers:
             callback_handler.on_algorithm_start(self)
 
@@ -101,7 +101,6 @@ class ConvergenceAlgorithm:
             exploration_size,
             num_loop_without_improvement,
             min_iteration_before_shrink,
-            max_num_of_shrink,
             surrogate_model_training_epochs,
             warmup_minibatch,
             callback_handlers,
@@ -135,7 +134,11 @@ class ConvergenceAlgorithm:
             last_tr_unreal_best = self.best_point_until_now.clone()
             self.logger.info(f"starting on {best_model_value}")
 
-            epoch_loop = trange(epochs, desc=f"Training EGL {epochs} epochs") if self.use_tqdm_bar else range(epochs)
+            epoch_loop = (
+                trange(epochs, desc=f"Training EGL {epochs} epochs")
+                if self.use_tqdm_bar
+                else range(epochs)
+            )
             for _ in epoch_loop:
                 counter += 1
                 # Explore
@@ -215,12 +218,7 @@ class ConvergenceAlgorithm:
                                 f"{self.env.denormalize(best_parameters_real).tolist()} with {self.trust_region}"
                             )
 
-                            self.trust_region.squeeze(
-                                best_parameters_real,
-                                gradient=self.curr_gradient(),
-                                grad_net=self.gradient,
-                                epsilon=self.epsilon,
-                            )
+                            self.trust_region.squeeze(best_parameters_real)
                         else:
                             self.trust_region.move_center(best_parameters_real)
                             self.logger.info(
@@ -236,7 +234,6 @@ class ConvergenceAlgorithm:
                         self.after_shrinking_hook()
                         # NOTE - I reset this network only if trust region has changed
                         #       Because If it has not the network should look the same
-                        reset_all_weights(self.helper_network)
                         database = self.trust_region.map(real_database)
                         self.warm_up(
                             batch_size,
@@ -256,7 +253,7 @@ class ConvergenceAlgorithm:
 
                 for stop_condition in stopping_conditions:
                     if stop_condition.should_stop(self, counter=num_of_shrinks):
-                        raise AlgorithmFinish(
+                        raise AlgorithmFinished(
                             stop_condition.REASON.format(
                                 alg=self.__class__.__name__,
                                 env=self.env,
@@ -266,7 +263,7 @@ class ConvergenceAlgorithm:
                         )
         except NoMoreBudgetError as e:
             self.logger.warning("No more Budget", exc_info=e)
-        except AlgorithmFinish as e:
+        except AlgorithmFinished as e:
             self.logger.info(f"{self.__class__.__name__} Finish stopped {e}")
 
         for handler in callback_handlers:
