@@ -12,6 +12,7 @@ from tqdm.auto import trange
 
 from bbo.function import Function
 from bbo.trust_region import TrustRegion
+from bbo.value_normalizer import ValueNormalizer
 
 
 class ConvergenceAlgorithm:
@@ -27,7 +28,7 @@ class ConvergenceAlgorithm:
         max_batch_size: int = 1024,
         num_of_batch_reply: int = 32,
         maximum_movement_for_shrink: float = math.inf,
-        output_mapping: OutputMapping = None,
+        value_normalizer: ValueNormalizer = None,
         trust_region: TrustRegion = None,
         dtype: torch.dtype = torch.float64,
         device: int = None,
@@ -45,7 +46,7 @@ class ConvergenceAlgorithm:
         self.max_batch_size = max_batch_size
         self.num_of_batch_reply = num_of_batch_reply
         self.maximum_movement_for_shrink = maximum_movement_for_shrink
-        self.output_mapping = output_mapping
+        self.value_normalizer = value_normalizer
         self.trust_region = trust_region
         self.dtype = dtype
         self.device = device
@@ -308,7 +309,7 @@ class ConvergenceAlgorithm:
         # Evaluate
         evaluations = self.evaluate_point(new_model_samples).to(device=self.device)
 
-        self.output_mapping.adapt(evaluations)
+        self.value_normalizer.adapt(evaluations)
         return new_model_samples, evaluations
 
     def samples_points(self, base_point: Tensor, exploration_size: int):

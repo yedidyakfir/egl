@@ -35,7 +35,7 @@ class EGL(ConvergenceAlgorithm):
         self, samples: Tensor, samples_value: Tensor, batch_size: int
     ):
         self.grad_network.train()
-        mapped_evaluations = self.output_mapping.map(samples_value)
+        mapped_evaluations = self.value_normalizer.map(samples_value)
         dataset = self.database_type(
             database=samples,
             values=mapped_evaluations,
