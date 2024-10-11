@@ -11,6 +11,7 @@ from torch.optim import Optimizer
 from tqdm.auto import trange
 
 from bbo.function import Function
+from bbo.trust_region import TrustRegion
 
 
 class ConvergenceAlgorithm:
@@ -27,7 +28,7 @@ class ConvergenceAlgorithm:
         num_of_batch_reply: int = 32,
         maximum_movement_for_shrink: float = math.inf,
         output_mapping: OutputMapping = None,
-        input_mapping: InputMapping = None,
+        trust_region: TrustRegion = None,
         dtype: torch.dtype = torch.float64,
         device: int = None,
         use_tqdm_bar: bool = True,
@@ -45,7 +46,7 @@ class ConvergenceAlgorithm:
         self.num_of_batch_reply = num_of_batch_reply
         self.maximum_movement_for_shrink = maximum_movement_for_shrink
         self.output_mapping = output_mapping
-        self.input_mapping = input_mapping
+        self.trust_region = trust_region
         self.dtype = dtype
         self.device = device
         self.use_tqdm_bar = use_tqdm_bar
@@ -60,8 +61,8 @@ class ConvergenceAlgorithm:
         return self.curr_point.detach()
 
     def real_data(self, data: Tensor):
-        if self.input_mapping:
-            data = self.env.denormalize(self.input_mapping.inverse(data))
+        if self.trust_region:
+            data = self.env.denormalize(self.trust_region.inverse(data))
         return data
 
     def eval_data(self, data: Tensor):
@@ -201,41 +202,41 @@ class ConvergenceAlgorithm:
                     should_shrink_in_addition_to_move = (
                         self.maximum_movement_for_shrink > unreal_distance_between_bests
                     )
-                    if self.input_mapping:
+                    if self.trust_region:
                         self.before_shrinking_hook()
-                        best_parameters_real = self.input_mapping.inverse(
+                        best_parameters_real = self.trust_region.inverse(
                             self.best_model.model_parameter_tensor().detach()
                         )
-                        real_database = self.input_mapping.inverse(database.detach())
+                        real_database = self.trust_region.inverse(database.detach())
                         if should_shrink_in_addition_to_move:
                             self.logger.info(
                                 f"Shrinking trust region, movement {unreal_distance_between_bests}, new center is "
-                                f"{self.env.denormalize(best_parameters_real).tolist()} with {self.input_mapping}"
+                                f"{self.env.denormalize(best_parameters_real).tolist()} with {self.trust_region}"
                             )
 
-                            self.input_mapping.squeeze(
+                            self.trust_region.squeeze(
                                 best_parameters_real,
                                 gradient=self.curr_gradient(),
                                 grad_net=self.gradient,
                                 epsilon=self.epsilon,
                             )
                         else:
-                            self.input_mapping.move_center(best_parameters_real)
+                            self.trust_region.move_center(best_parameters_real)
                             self.logger.info(
                                 f"Moving trust region after moving {unreal_distance_between_bests}, new center is "
-                                f"{self.env.denormalize(best_parameters_real).tolist()} with {self.input_mapping}"
+                                f"{self.env.denormalize(best_parameters_real).tolist()} with {self.trust_region}"
                             )
 
                         reply_memory_size = self.num_of_batch_reply * exploration_size
                         self.curr_point = self.curr_point.from_parameter_tensor(
-                            self.input_mapping.map(best_parameters_real).clone()
+                            self.trust_region.map(best_parameters_real).clone()
                         )
                         self.best_model = copy.deepcopy(self.curr_point)
                         self.after_shrinking_hook()
                         # NOTE - I reset this network only if trust region has changed
                         #       Because If it has not the network should look the same
                         reset_all_weights(self.helper_network)
-                        database = self.input_mapping.map(real_database)
+                        database = self.trust_region.map(real_database)
                         self.warm_up(
                             batch_size,
                             database,
@@ -259,7 +260,7 @@ class ConvergenceAlgorithm:
                                 alg=self.__class__.__name__,
                                 env=self.env,
                                 best_point=self.best_point_until_now,
-                                tr=self.input_mapping,
+                                tr=self.trust_region,
                             )
                         )
         except NoMoreBudgetError as e:
@@ -331,7 +332,7 @@ class ConvergenceAlgorithm:
 
     def evaluate_point(self, new_model_samples: Tensor):
         self.logger.info(
-            f"Evaluating {len(new_model_samples)} on env with {self.input_mapping}"
+            f"Evaluating {len(new_model_samples)} on env with {self.trust_region}"
         )
         return self.eval_data(new_model_samples)
 
