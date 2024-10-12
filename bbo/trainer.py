@@ -1,12 +1,13 @@
-from torch.utils.data import Dataset
+from typing import Callable
+
 from torch import Tensor
-from torch.nn import Module
 from torch.optim import Optimizer
 from torch.utils.data import BatchSampler, RandomSampler, DataLoader
+from torch.utils.data import Dataset
 
 
 def train_gradient_network(
-    gradient_loss_func: Module,
+    gradient_loss_func: Callable,
     optimizer,
     dataset: Dataset,
     batch_size: int,
