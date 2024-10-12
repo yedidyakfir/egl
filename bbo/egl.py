@@ -81,4 +81,3 @@ class EGL(ConvergenceAlgorithm):
 
     def after_shrinking_hook(self):
         reset_all_weights(self.grad_network)
-

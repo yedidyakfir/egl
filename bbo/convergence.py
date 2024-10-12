@@ -15,7 +15,7 @@ from bbo.function import Function
 from bbo.handlers import AlgorithmCallbackHandler
 from bbo.stop_condition import AlgorithmStopCondition
 from bbo.trust_region import TrustRegion
-from bbo.utils import distance_between_tensors
+from bbo.utils import distance_between_tensors, ball_perturb
 from bbo.value_normalizer import ValueNormalizer
 
 
@@ -315,7 +315,6 @@ class ConvergenceAlgorithm:
         )
         new_model_samples = torch.cat(
             (
-                # TODO - use DI to allow other exploration
                 ball_perturb(
                     base_point,
                     self.epsilon,
