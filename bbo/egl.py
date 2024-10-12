@@ -1,14 +1,14 @@
-import torch
 from typing import Callable, Type, Tuple
 
-from torch.utils.data import Dataset
+import torch
 from torch import Tensor
 from torch.nn import Module
 from torch.optim import Optimizer
+from torch.utils.data import Dataset
 
 from bbo.convergence import ConvergenceAlgorithm
 from bbo.distribution import WeightsDistributionBase
-from bbo.losses import GradientLoss, loss_with_quantile
+from bbo.losses import loss_with_quantile
 from bbo.trainer import train_gradient_network, step_model_with_gradient
 from bbo.utils import reset_all_weights, loss_from_taylor_loss
 
