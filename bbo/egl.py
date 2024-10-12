@@ -7,7 +7,8 @@ from torch.nn import Module
 from torch.optim import Optimizer
 
 from bbo.convergence import ConvergenceAlgorithm
-from bbo.losses import GradientLoss
+from bbo.distribution import WeightsDistributionBase
+from bbo.losses import GradientLoss, loss_with_quantile
 from bbo.trainer import train_gradient_network, step_model_with_gradient
 from bbo.utils import reset_all_weights
 
@@ -22,6 +23,7 @@ class EGL(ConvergenceAlgorithm):
         num_of_minibatch_to_train: int,
         database_type: Type[Dataset],
         dataset_parameters: dict,
+        weights_func: WeightsDistributionBase = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -31,6 +33,7 @@ class EGL(ConvergenceAlgorithm):
         self.dataset_parameters = dataset_parameters
         self.num_of_minibatch_to_train = num_of_minibatch_to_train
         self.database_type = database_type
+        self.weight_func = weights_func
 
     def train_helper_model(
         self, samples: Tensor, samples_value: Tensor, batch_size: int
@@ -56,6 +59,8 @@ class EGL(ConvergenceAlgorithm):
         self.grad_network.eval()
 
     def calc_loss(self, value: Tensor, target: Tensor) -> Tensor:
+        if self.weight_func:
+            return loss_with_quantile(value, target, self.weight_func, self.grad_loss)
         return self.grad_loss(value, target)
 
     def train_model(self):

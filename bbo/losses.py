@@ -46,12 +46,11 @@ class NaturalHessianLoss(GradientLoss):
 def loss_with_quantile(
     value: Tensor,
     target: Tensor,
-    quantile: int,
     weights_creator: WeightsDistributionBase,
     loss: Callable,
 ) -> Tensor:
     smallest_element = (value - target).abs().clone().detach()
-    weights = weights_creator.distribute_weights(smallest_element, quantile)
+    weights = weights_creator.distribute_weights(smallest_element)
 
     loss = loss(value, target)
     loss = (loss * weights).mean()
