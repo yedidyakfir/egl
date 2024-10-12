@@ -1,3 +1,5 @@
+from typing import Callable
+
 import torch
 from torch import Tensor
 from torch.nn import Module
@@ -56,3 +58,13 @@ def hessian_from_gradient_network(grad_network, x):
     )
     j = jacobian(x)
     return (j + j.transpose(-2, -1)) / 2
+
+
+def loss_from_taylor_loss(
+    taylor_loss, loss: Callable
+) -> Callable[[Tensor, Tensor, Tensor, Tensor], Tensor]:
+    def calc_loss(x_i, x_j, y_i, y_j):
+        value, target = taylor_loss(x_i, x_j, y_i, y_j)
+        return loss(value, target)
+
+    return calc_loss

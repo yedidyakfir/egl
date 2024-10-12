@@ -1,5 +1,5 @@
 import torch
-from typing import Callable, Type
+from typing import Callable, Type, Tuple
 
 from torch.utils.data import Dataset
 from torch import Tensor
@@ -10,7 +10,7 @@ from bbo.convergence import ConvergenceAlgorithm
 from bbo.distribution import WeightsDistributionBase
 from bbo.losses import GradientLoss, loss_with_quantile
 from bbo.trainer import train_gradient_network, step_model_with_gradient
-from bbo.utils import reset_all_weights
+from bbo.utils import reset_all_weights, loss_from_taylor_loss
 
 
 class EGL(ConvergenceAlgorithm):
@@ -24,6 +24,9 @@ class EGL(ConvergenceAlgorithm):
         database_type: Type[Dataset],
         dataset_parameters: dict,
         weights_func: WeightsDistributionBase = None,
+        taylor_loss: Callable[
+            [Tensor, Tensor, Tensor, Tensor], Tuple[Tensor, Tensor]
+        ] = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -34,6 +37,7 @@ class EGL(ConvergenceAlgorithm):
         self.num_of_minibatch_to_train = num_of_minibatch_to_train
         self.database_type = database_type
         self.weight_func = weights_func
+        self.taylor_loss = taylor_loss
 
     def train_helper_model(
         self, samples: Tensor, samples_value: Tensor, batch_size: int
@@ -46,11 +50,10 @@ class EGL(ConvergenceAlgorithm):
             **self.dataset_parameters,
             logger=self.logger,
         )
-        taylor_loss = GradientLoss(
-            self.grad_network, self.perturb * self.epsilon, self.calc_loss
-        )
+        loss = loss_from_taylor_loss(self.taylor_loss, self.grad_loss)
+
         train_gradient_network(
-            taylor_loss,
+            loss,
             self.gradient_optimizer,
             dataset,
             batch_size,

@@ -9,10 +9,9 @@ from bbo.utils import hessian_from_gradient_network
 
 
 class GradientLoss(Module):
-    def __init__(self, grad_network, calc_loss):
+    def __init__(self, grad_network):
         super().__init__()
         self.grad_network = grad_network
-        self.calc_loss = calc_loss
 
     def forward(self, x_i, x_j, y_i, y_j):
         assert len(x_i.shape) <= 2, "Cant handle multiple batches yet"
@@ -22,7 +21,7 @@ class GradientLoss(Module):
         value = (x_delta * grad_x_i).sum(dim=1) + self.taylor_remainder(x_delta)
         target = y_j - y_i
 
-        return self.calc_loss(value, target)
+        return value, target
 
     def taylor_remainder(self, x_delta):
         return 0
