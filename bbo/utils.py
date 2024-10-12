@@ -46,3 +46,13 @@ def ball_perturb(
 
     explore = ball_center + eps * mag * perturb
     return explore
+
+
+def hessian_from_gradient_network(grad_network, x):
+    jacobian = (
+        torch.vmap(torch.func.jacrev(grad_network), randomness="different")
+        if len(x.shape) == 2
+        else torch.func.jacrev(grad_network)
+    )
+    j = jacobian(x)
+    return (j + j.transpose(-2, -1)) / 2
