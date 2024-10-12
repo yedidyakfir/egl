@@ -114,17 +114,8 @@ class ConvergenceAlgorithm:
             database, evaluations = self.explore(warmup_minibatch * exploration_size)
             num_of_samples = database.shape[-2]
             batch_size = min(self.max_batch_size, num_of_samples)
-            minibatches = num_of_samples // batch_size
 
-            self.warm_up(
-                batch_size,
-                database,
-                evaluations,
-                exploration_size,
-                surrogate_model_training_epochs,
-                minibatches,
-                warmup_loops,
-            )
+            self.warm_up(batch_size, database, evaluations, warmup_loops)
 
             best_model_value = self.eval_data(self.best_point_until_now)
             reply_memory_size = self.num_of_batch_reply * exploration_size
@@ -152,16 +143,7 @@ class ConvergenceAlgorithm:
 
                 num_of_samples = database.shape[-2]
                 batch_size = min(self.max_batch_size, num_of_samples)
-                minibatches = num_of_samples // batch_size
-                test_loss = self.train_surrogate(
-                    database,
-                    evaluations,
-                    minibatches,
-                    batch_size,
-                    exploration_size,
-                    surrogate_model_training_epochs,
-                    exploration_size,
-                )
+                test_loss = self.train_surrogate(database, evaluations, batch_size)
                 self.train_model()
 
                 # Handle end of epoch
@@ -235,15 +217,7 @@ class ConvergenceAlgorithm:
                         # NOTE - I reset this network only if trust region has changed
                         #       Because If it has not the network should look the same
                         database = self.trust_region.map(real_database)
-                        self.warm_up(
-                            batch_size,
-                            database,
-                            evaluations,
-                            exploration_size,
-                            surrogate_model_training_epochs,
-                            minibatches,
-                            warmup_loops,
-                        )
+                        self.warm_up(batch_size, database, evaluations, warmup_loops)
                     self.logger.info(f"Shrinking sample radius to {self.epsilon}")
                     self.logger.info(f"Space status {self.env}")
                     for handler in callback_handlers:
@@ -275,30 +249,13 @@ class ConvergenceAlgorithm:
             else:
                 handler.on_algorithm_end(self)
 
-    def warm_up(
-        self,
-        batch_size,
-        database,
-        evaluations,
-        exploration_size,
-        helper_model_training_epochs,
-        minibatches,
-        warmup_loops,
-    ):
+    def warm_up(self, batch_size, database, evaluations, warmup_loops):
         for i in range(warmup_loops):
             self.logger.info(f"{i} loop for warmup for {self.__class__.__name__}")
-            self.train_surrogate(
-                database,
-                evaluations,
-                minibatches,
-                batch_size,
-                exploration_size,
-                helper_model_training_epochs,
-                len(database),
-            )
+            self.train_surrogate(database, evaluations, batch_size)
 
     def explore(self, exploration_size: int):
-        current_model_parameters = self.curr_point.model_parameter_tensor()
+        current_model_parameters = self.curr_point.detach()
         new_model_samples = self.samples_points(
             current_model_parameters, exploration_size
         )
