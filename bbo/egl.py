@@ -39,7 +39,7 @@ class EGL(ConvergenceAlgorithm):
         self.weight_func = weights_func
         self.taylor_loss = taylor_loss
 
-    def train_helper_model(
+    def train_surrogate(
         self, samples: Tensor, samples_value: Tensor, batch_size: int
     ):
         self.grad_network.train()

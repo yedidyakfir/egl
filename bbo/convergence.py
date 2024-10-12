@@ -333,16 +333,7 @@ class ConvergenceAlgorithm:
         )
         return self.eval_data(new_model_samples)
 
-    def train_surrogate(
-        self,
-        samples: Tensor,
-        samples_value: Tensor,
-        num_of_minibatch: int,
-        batch_size: int,
-        exploration_size: int,
-        epochs: int,
-        new_samples_count: int,
-    ):
+    def train_surrogate(self, samples: Tensor, samples_value: Tensor, batch_size: int):
         raise NotImplementedError()
 
     def train_model(self):
