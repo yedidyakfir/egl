@@ -8,16 +8,17 @@ from torch import Tensor
 
 class WeightsDistributionBase(ABC):
     @abc.abstractmethod
-    def distribute_weights(self, data: Tensor, quantile: int) -> Tensor:
+    def distribute_weights(self, data: Tensor) -> Tensor:
         raise NotImplementedError()
 
 
 class SigmoidWeights(WeightsDistributionBase):
-    def __init__(self, gamma: int = -10):
+    def __init__(self, gamma: int = -10, quantile: int = 83):
         self.gamma = gamma
+        self.quantile = quantile
 
-    def distribute_weights(self, data: Tensor, quantile: int) -> Tensor:
-        threshold_index = int(len(data) * (1 - quantile / 100))
+    def distribute_weights(self, data: Tensor) -> Tensor:
+        threshold_index = int(len(data) * (1 - self.quantile / 100))
         kth_value, _ = torch.kthvalue(data, threshold_index)
 
         weights = 1 / (1 + (self.gamma * (data - kth_value)).exp())
@@ -25,8 +26,11 @@ class SigmoidWeights(WeightsDistributionBase):
 
 
 class QuantileWeights(WeightsDistributionBase):
-    def distribute_weights(self, data: Tensor, quantile: int) -> Tensor:
-        train_percentile = quantile / 100
+    def __init__(self, quantile: int = 83):
+        self.quantile = quantile
+
+    def distribute_weights(self, data: Tensor) -> Tensor:
+        train_percentile = self.quantile / 100
 
         _, indices = torch.topk(-data, int(len(data) * train_percentile))
 
