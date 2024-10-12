@@ -4,6 +4,8 @@ import torch
 from torch import Tensor
 from torch.nn import Module
 
+from bbo.distribution import WeightsDistributionBase
+
 
 class GradientLoss(Module):
     def __init__(self, grad_network, ball_perturb_size, calc_loss):
@@ -38,15 +40,6 @@ class NaturalHessianLoss(GradientLoss):
             ),
             x_delta.reshape((x_delta.shape[0], x_delta.shape[1], 1)),
         ).squeeze()
-
-
-class HessianWithDifferentNetwork(NaturalHessianLoss):
-    def __init__(self, *args, hessian_network, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.hessian_network = hessian_network
-
-    def calculate_hessian(self, x):
-        return self.hessian_network(x)
 
 
 def loss_with_quantile(
