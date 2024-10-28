@@ -11,4 +11,8 @@ def __getattr__(name):
         from .igl import IGL
 
         return IGL
+    if name == "minimize":
+        from .alg_optimizer import minimize
+
+        return minimize
     raise AttributeError(f"module {__name__} has no attribute {name}")
