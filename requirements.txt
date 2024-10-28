@@ -1,4 +1,2 @@
 torch
 tqdm
-numpy
-cma
