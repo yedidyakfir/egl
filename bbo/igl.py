@@ -5,8 +5,8 @@ from torch.nn import Module
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader, BatchSampler, RandomSampler
 
-from bbo.convergence import ConvergenceAlgorithm
-from bbo.datsets import PointDataset
+from .convergence import ConvergenceAlgorithm
+from .datsets import PointDataset
 
 
 class IGL(ConvergenceAlgorithm):

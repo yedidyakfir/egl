@@ -4,8 +4,8 @@ import torch
 from torch import Tensor
 from torch.nn import Module
 
-from bbo.distribution import WeightsDistributionBase
-from bbo.utils import hessian_from_gradient_network
+from .distribution import WeightsDistributionBase
+from .utils import hessian_from_gradient_network
 
 
 class GradientLoss(Module):

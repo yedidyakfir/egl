@@ -7,11 +7,11 @@ import numpy as np
 import torch
 from cma import CMAEvolutionStrategy
 
-from bbo.exception import AlgorithmFinished, NoMoreBudgetError
-from bbo.function import Function
-from bbo.handlers import AlgorithmCallbackHandler
-from bbo.stop_condition import AlgorithmStopCondition
-from bbo.trust_region import TrustRegion
+from .exception import AlgorithmFinished, NoMoreBudgetError
+from .function import Function
+from .handlers import AlgorithmCallbackHandler
+from .stop_condition import AlgorithmStopCondition
+from .trust_region import TrustRegion
 
 
 class TRCovarianceMatrixAdaptation:

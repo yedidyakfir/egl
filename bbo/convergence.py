@@ -10,13 +10,13 @@ from torch import Tensor
 from torch.optim import Optimizer
 from tqdm.auto import trange
 
-from bbo.exception import NoMoreBudgetError, AlgorithmFinished
-from bbo.function import Function
-from bbo.handlers import AlgorithmCallbackHandler
-from bbo.stop_condition import AlgorithmStopCondition
-from bbo.trust_region import TrustRegion
-from bbo.utils import distance_between_tensors, ball_perturb
-from bbo.value_normalizer import ValueNormalizer
+from .exception import NoMoreBudgetError, AlgorithmFinished
+from .function import Function
+from .handlers import AlgorithmCallbackHandler
+from .stop_condition import AlgorithmStopCondition
+from .trust_region import TrustRegion
+from .utils import distance_between_tensors, ball_perturb
+from .value_normalizer import ValueNormalizer
 
 
 class ConvergenceAlgorithm:
