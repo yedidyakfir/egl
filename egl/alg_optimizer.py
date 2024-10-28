@@ -9,26 +9,20 @@ from .egl import EGL
 from .function import BasicFunction
 import torch.nn as nn
 
+from .handlers import CallableForEpochEnd
 from .losses import GradientLoss, NaturalHessianLoss
 from .trust_region import TanhTrustRegion
 from .value_normalizer import AdaptedOutputUnconstrainedMapping
 
 
-def minimize(
-    fun,
-    x0,
-    args=(),
-    bounds=None,
-    tol=None,
-    callback=None,
-    options=None,
-):
+def minimize(fun, x0, args=(), bounds=None, callback=None):
     use_hessian = args[0]
     taylor_loss_klass = NaturalHessianLoss if use_hessian else GradientLoss
     use_weights = args[1]
     dim = len(x0)
     x0.requires_grad = True
-    func = BasicFunction(fun)
+    bounds = bounds or [-5, 5]
+    func = BasicFunction(fun, *bounds)
     optimizer = Adam(x0.parameters(), lr=0.1)
     gradient_network = nn.Sequential(
         nn.Linear(dim, 10),
@@ -60,10 +54,14 @@ def minimize(
         weights_func=QuantileWeights() if use_weights else None,
         taylor_loss=taylor_loss,
         trust_region=TanhTrustRegion(
-            lower_bounds=torch.tensor([-func.lower_bound] * dim, device=x0.device, dtype=x0.dtype),
-            upper_bounds=torch.tensor([func.lower_bound] * dim, device=x0.device, dtype=x0.dtype),
+            lower_bounds=torch.tensor(
+                [-func.lower_bound] * dim, device=x0.device, dtype=x0.dtype
+            ),
+            upper_bounds=torch.tensor(
+                [func.lower_bound] * dim, device=x0.device, dtype=x0.dtype
+            ),
         ),
-        value_normalizer=AdaptedOutputUnconstrainedMapping()
+        value_normalizer=AdaptedOutputUnconstrainedMapping(),
     )
 
     egl.train(
@@ -71,5 +69,6 @@ def minimize(
         exploration_size=int(8 * math.sqrt(dim)),
         num_loop_without_improvement=10,
         min_iteration_before_shrink=40,
+        callback_handlers=[CallableForEpochEnd(callback)],
     )
     return egl.env.denormalize(egl.trust_region.inverse(egl.best_model))
