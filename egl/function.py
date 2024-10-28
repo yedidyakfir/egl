@@ -2,6 +2,8 @@ from typing import Protocol
 
 from torch import Tensor
 
+from .exception import NoMoreBudgetError
+
 
 class Function(Protocol):
     def evaluate(self, data: Tensor) -> Tensor:
@@ -18,12 +20,17 @@ class Function(Protocol):
 
 
 class BasicFunction(Function):
-    def __init__(self, func, lower_bound=-5, upper_bound=5):
+    def __init__(self, func, budget=150_000, lower_bound=-5, upper_bound=5):
         self.func = func
+        self.curr_budget = 0
+        self.budget = budget
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
 
     def evaluate(self, data: Tensor) -> Tensor:
+        self.curr_budget += len(data)
+        if self.curr_budget > self.budget:
+            raise NoMoreBudgetError(f"Exceeded budget of {self.curr_budget}")
         return self.func(data)
 
     def denormalize(self, data: Tensor) -> Tensor:
