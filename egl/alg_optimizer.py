@@ -1,3 +1,4 @@
+import torch
 import math
 
 from torch.optim import Adam
@@ -9,6 +10,8 @@ from .function import BasicFunction
 import torch.nn as nn
 
 from .losses import GradientLoss, NaturalHessianLoss
+from .trust_region import TanhTrustRegion
+from .value_normalizer import AdaptedOutputUnconstrainedMapping
 
 
 def minimize(
@@ -56,6 +59,11 @@ def minimize(
         },
         weights_func=QuantileWeights() if use_weights else None,
         taylor_loss=taylor_loss,
+        trust_region=TanhTrustRegion(
+            lower_bounds=torch.tensor([-func.lower_bound] * dim, device=x0.device, dtype=x0.dtype),
+            upper_bounds=torch.tensor([func.lower_bound] * dim, device=x0.device, dtype=x0.dtype),
+        ),
+        value_normalizer=AdaptedOutputUnconstrainedMapping()
     )
 
     egl.train(
