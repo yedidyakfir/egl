@@ -22,8 +22,8 @@ class EGL(ConvergenceAlgorithm):
         grad_loss: Callable,
         num_of_minibatch_to_train: int,
         database_type: Type[Dataset],
-        dataset_parameters: dict,
-        weights_func: WeightsDistributionBase = None,
+        dataset_parameters: Callable,
+        weight_func: WeightsDistributionBase = None,
         taylor_loss: Callable[
             [Tensor, Tensor, Tensor, Tensor], Tuple[Tensor, Tensor]
         ] = None,
@@ -36,7 +36,7 @@ class EGL(ConvergenceAlgorithm):
         self.dataset_parameters = dataset_parameters
         self.num_of_minibatch_to_train = num_of_minibatch_to_train
         self.database_type = database_type
-        self.weight_func = weights_func
+        self.weight_func = weight_func
         self.taylor_loss = taylor_loss
 
     def train_surrogate(
@@ -44,10 +44,11 @@ class EGL(ConvergenceAlgorithm):
     ):
         self.grad_network.train()
         mapped_evaluations = self.value_normalizer.map(samples_value)
+        additional_params = self.dataset_parameters(self)
         dataset = self.database_type(
             database=samples,
             values=mapped_evaluations,
-            **self.dataset_parameters,
+            **additional_params,
             logger=self.logger,
         )
         loss = loss_from_taylor_loss(self.taylor_loss, self.grad_loss)
