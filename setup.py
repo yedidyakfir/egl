@@ -1,10 +1,12 @@
+from pathlib import Path
+
 from setuptools import setup, find_packages
 
-with open("requirements.txt") as f:
+with open(Path(__file__).parent / "requirements.txt") as f:
     install_requires = f.readlines()
 
 setup(
-    name="egl",
+    name="bbo-egl",
     version="1.0.0",
     packages=find_packages(),
     install_requires=install_requires,
