@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "bbo-egl"
+version = "1.0.0"
+description = "A package of black-box optimization (BBO) algorithms."
+authors = ["Yedidya Kfir <yedidyakfir@gmail.com>"]
+readme = "README.md"
+license = "MIT"
+packages = [{include = "egl"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "*"
+tqdm = "*"
+
+[tool.poetry.extras]
+cma = ["cma", "numpy"]
+
+[tool.poetry.group.cma.dependencies]
+cma = {version = "*", optional = true}
+numpy = {version = "*", optional = true}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
