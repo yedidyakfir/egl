@@ -41,6 +41,12 @@ class NaturalHessianLoss(GradientLoss):
         ).squeeze()
 
 
+class DetachedHessianLoss(NaturalHessianLoss):
+    def calculate_hessian(self, x):
+        with torch.no_grad():
+            return super().calculate_hessian(x).detach()
+
+
 def loss_with_quantile(
     value: Tensor,
     target: Tensor,
