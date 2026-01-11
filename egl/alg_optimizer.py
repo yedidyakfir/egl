@@ -51,7 +51,7 @@ def minimize(fun, x0, args=(), bounds=None, callback=None):
             "epsilon": alg.epsilon,
             "max_tuples": num_of_minibatch_to_train,
         },
-        weights_func=QuantileWeights() if use_weights else None,
+        weight_func=QuantileWeights() if use_weights else None,
         taylor_loss=taylor_loss,
         trust_region=TanhTrustRegion(
             lower_bounds=torch.tensor(
