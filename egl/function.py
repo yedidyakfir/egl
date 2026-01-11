@@ -31,6 +31,9 @@ class BasicFunction(Function):
         self.curr_budget += len(data)
         if self.curr_budget > self.budget:
             raise NoMoreBudgetError(f"Exceeded budget of {self.curr_budget}")
+        if data.ndim == 1:
+            data = data.unsqueeze(0)
+            return self.func(data).squeeze(0)
         return self.func(data)
 
     def denormalize(self, data: Tensor) -> Tensor:
