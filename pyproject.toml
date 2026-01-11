@@ -19,6 +19,10 @@ cma = ["cma", "numpy"]
 cma = {version = "*", optional = true}
 numpy = {version = "*", optional = true}
 
+[tool.poetry.group.test.dependencies]
+pytest = "*"
+coco-experiment = "*"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
