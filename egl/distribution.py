@@ -4,10 +4,9 @@ from abc import ABC
 import numpy as np
 import torch
 from cma import CMAEvolutionStrategy
+from egl.datsets import TuplesDataset
 from torch import Tensor
 from torch.distributions import MultivariateNormal
-
-from egl.datsets import TuplesDataset
 
 
 def prepare_batches_calc(dataset: TuplesDataset, max_memory_mb: int):
@@ -95,28 +94,8 @@ class WeightsDistributionBase(ABC):
             return final_weights
 
 
-class SigmoidWeights(WeightsDistributionBase):
-    def __init__(self, train_quantile: int, gamma: int = -10, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.train_quantile = train_quantile
-        self.gamma = gamma
-
-    def pre_training(self, samples: Tensor, values: Tensor):
-        pass
-
-    def distribute_weights(
-        self, x_i: Tensor, x_j: Tensor, y_i: Tensor, y_j: Tensor
-    ) -> Tensor:
-        data = torch.min(y_i, y_j)
-        threshold_index = int(len(data) * (1 - self.train_quantile / 100))
-        kth_value, _ = torch.kthvalue(data, threshold_index)
-
-        weights = 1 / (1 + (self.gamma * (data - kth_value)).exp())
-        return weights.detach()
-
-
 class QuantileWeights(WeightsDistributionBase):
-    def __init__(self, train_quantile: int, *args, **kwargs):
+    def __init__(self, train_quantile: int = 50, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.train_quantile = train_quantile
         self.quantile_value = None
@@ -128,13 +107,10 @@ class QuantileWeights(WeightsDistributionBase):
         self, x_i: Tensor, x_j: Tensor, y_i: Tensor, y_j: Tensor
     ) -> Tensor:
         data = torch.min(y_i, y_j)
-
         indices = data < self.quantile_value
         weights = torch.zeros_like(data, dtype=data.dtype)
         weights[indices] = 1.0
-        weights = weights.detach()
-
-        return weights
+        return weights.detach()
 
 
 class CMAWeights(WeightsDistributionBase):
