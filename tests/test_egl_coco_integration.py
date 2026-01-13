@@ -54,7 +54,7 @@ def create_coco_function(func_num: int, dim: int, instance: int):
 def test_egl_with_coco_runs_without_error_sanity(func_num, dim, instance):
     # Arrange
     coco_func, lower, upper = create_coco_function(func_num, dim, instance)
-    x0 = ParameterTensor(torch.zeros(dim, dtype=torch.float64))
+    x0 = torch.zeros(dim, dtype=torch.float64, requires_grad=True)
 
     # Act
     result = minimize(
