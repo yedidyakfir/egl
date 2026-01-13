@@ -5,6 +5,7 @@ from torch import Tensor
 from torch.nn import Module
 from torch.optim import Optimizer
 from torch.utils.data import Dataset
+from torch.utils.data import WeightedRandomSampler
 
 from .convergence import ConvergenceAlgorithm
 from .distribution import WeightsDistributionBase
@@ -39,9 +40,10 @@ class EGL(ConvergenceAlgorithm):
         self.weight_func = weight_func
         self.taylor_loss = taylor_loss
 
-    def train_surrogate(
-        self, samples: Tensor, samples_value: Tensor, batch_size: int
-    ):
+    def train_surrogate(self, samples: Tensor, samples_value: Tensor, batch_size: int):
+        if self.weight_func:
+            self.weight_func.pre_training(dataset.database, dataset.values)
+
         self.grad_network.train()
         mapped_evaluations = self.value_normalizer.map(samples_value)
         additional_params = self.dataset_parameters(self)
@@ -52,13 +54,19 @@ class EGL(ConvergenceAlgorithm):
             logger=self.logger,
         )
         loss = loss_from_taylor_loss(self.taylor_loss, self.grad_loss)
-
+        sampler = None
+        if self.weight_func:
+            sampler = WeightedRandomSampler(
+                distribute_weights.detach().clone(), len(dataset)
+            )
         train_gradient_network(
             loss,
             self.gradient_optimizer,
             dataset,
             batch_size,
-            self.num_of_minibatch_to_train,
+            self.logger,
+            # self.num_of_minibatch_to_train,
+            sampler=sampler,
         )
         self.grad_network.eval()
 
