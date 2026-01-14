@@ -41,9 +41,6 @@ class EGL(ConvergenceAlgorithm):
         self.taylor_loss = taylor_loss
 
     def train_surrogate(self, samples: Tensor, samples_value: Tensor, batch_size: int):
-        if self.weight_func:
-            self.weight_func.pre_training(dataset.database, dataset.values)
-
         self.grad_network.train()
         mapped_evaluations = self.value_normalizer.map(samples_value)
         additional_params = self.dataset_parameters(self)
@@ -53,12 +50,20 @@ class EGL(ConvergenceAlgorithm):
             **additional_params,
             logger=self.logger,
         )
+
+        if self.weight_func:
+            self.weight_func.pre_training(dataset.database, dataset.values)
+
         loss = loss_from_taylor_loss(self.taylor_loss, self.grad_loss)
         sampler = None
         if self.weight_func:
+            distribute_weights = self.weight_func.distribution_from_dataset(dataset)
+            if distribute_weights.device.type == "mps":
+                distribute_weights = distribute_weights.cpu()
             sampler = WeightedRandomSampler(
                 distribute_weights.detach().clone(), len(dataset)
             )
+
         train_gradient_network(
             loss,
             self.gradient_optimizer,
@@ -96,5 +101,13 @@ class EGL(ConvergenceAlgorithm):
         model_to_train_gradient[model_to_train_gradient != model_to_train_gradient] = 0
         return model_to_train_gradient
 
+    def explore(self, exploration_size: int):
+        samples, evaluations = super().explore(exploration_size)
+        if self.weight_func:
+            self.weight_func.update(samples=samples, values=evaluations)
+        return samples, evaluations
+
     def after_shrinking_hook(self):
         reset_all_weights(self.grad_network)
+        if self.weight_func:
+            self.weight_func.restart()

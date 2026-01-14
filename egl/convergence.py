@@ -6,6 +6,7 @@ from logging import Logger
 from typing import List
 
 import torch
+import torch.nn as nn
 from torch import Tensor
 from torch.optim import Optimizer
 from tqdm.auto import trange
@@ -59,7 +60,7 @@ class ConvergenceAlgorithm:
 
     @property
     def best_point_until_now(self):
-        return self.best_model.detach()
+        return self.best_model.detach().clone()
 
     @property
     def curr_point_to_draw(self):
@@ -181,7 +182,7 @@ class ConvergenceAlgorithm:
 
                     unreal_distance_between_bests = distance_between_tensors(
                         last_tr_unreal_best,
-                        self.best_model.model_parameter_tensor().detach(),
+                        self.best_model.detach().clone(),
                     )
                     self.epsilon *= self.epsilon_factor
                     self.epsilon = max(self.epsilon, self.min_epsilon)
@@ -191,7 +192,7 @@ class ConvergenceAlgorithm:
                     if self.trust_region:
                         self.before_shrinking_hook()
                         best_parameters_real = self.trust_region.inverse(
-                            self.best_model.model_parameter_tensor().detach()
+                            self.best_model.detach().clone()
                         )
                         real_database = self.trust_region.inverse(database.detach())
                         if should_shrink_in_addition_to_move:
@@ -209,7 +210,7 @@ class ConvergenceAlgorithm:
                             )
 
                         reply_memory_size = self.num_of_batch_reply * exploration_size
-                        self.curr_point = self.curr_point.from_parameter_tensor(
+                        self.curr_point = nn.Parameter(
                             self.trust_region.map(best_parameters_real).clone()
                         )
                         self.best_model = copy.deepcopy(self.curr_point)

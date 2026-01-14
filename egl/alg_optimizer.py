@@ -20,10 +20,14 @@ def minimize(fun, x0, args=(), bounds=None, constraints=150_000, callback=None):
     taylor_loss_klass = NaturalHessianLoss if use_hessian else GradientLoss
     use_weights = args[1]
     dim = len(x0)
+
+    if not isinstance(x0, nn.Parameter):
+        x0 = nn.Parameter(x0.clone().detach())
     x0.requires_grad = True
+
     bounds = bounds or [-5, 5]
     func = BasicFunction(fun, constraints, *bounds)
-    optimizer = Adam(x0.parameters(), lr=0.1)
+    optimizer = Adam([x0], lr=0.1)
     gradient_network = nn.Sequential(
         nn.Linear(dim, 10),
         nn.ReLU(),
@@ -71,5 +75,5 @@ def minimize(fun, x0, args=(), bounds=None, constraints=150_000, callback=None):
         min_iteration_before_shrink=40,
         callback_handlers=[CallableForEpochEnd(callback)],
     )
-    best_point = egl.best_model.model_parameter_tensor().detach()
+    best_point = egl.best_model.detach().clone()
     return egl.env.denormalize(egl.trust_region.inverse(best_point))
