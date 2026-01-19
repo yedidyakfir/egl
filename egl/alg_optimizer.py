@@ -26,7 +26,7 @@ def minimize(fun, x0, args=(), bounds=None, constraints=150_000, callback=None):
 
     bounds = bounds or [-5, 5]
     func = BasicFunction(fun, constraints, *bounds)
-    optimizer = Adam([x0], lr=0.1)
+    optimizer = Adam([x0], lr=0.01, eps=1e-04)
     device = x0.device
     gradient_network = nn.Sequential(
         nn.Linear(dim, 10),
@@ -35,7 +35,7 @@ def minimize(fun, x0, args=(), bounds=None, constraints=150_000, callback=None):
         nn.ReLU(),
         nn.Linear(15, dim),
     ).to(device=device, dtype=x0.dtype)
-    grad_optimizer = Adam(gradient_network.parameters())
+    grad_optimizer = Adam(gradient_network.parameters(), eps=1e-04)
     taylor_loss = taylor_loss_klass(gradient_network)
     num_of_minibatch_to_train = int(2000 * math.sqrt(dim))
     max_tuples = int(20_000 * math.floor(math.sqrt(dim)))
