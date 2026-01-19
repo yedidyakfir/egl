@@ -1,14 +1,13 @@
-import torch
 import math
 
+import torch
+import torch.nn as nn
 from torch.optim import Adam
 
 from .datsets import PairsInEpsRangeDataset
-from .distribution import QuantileWeights
+from .distribution import CMAWeights
 from .egl import EGL
 from .function import BasicFunction
-import torch.nn as nn
-
 from .handlers import CallableForEpochEnd
 from .losses import GradientLoss, NaturalHessianLoss
 from .trust_region import TanhTrustRegion
@@ -28,21 +27,23 @@ def minimize(fun, x0, args=(), bounds=None, constraints=150_000, callback=None):
     bounds = bounds or [-5, 5]
     func = BasicFunction(fun, constraints, *bounds)
     optimizer = Adam([x0], lr=0.1)
+    device = x0.device
     gradient_network = nn.Sequential(
         nn.Linear(dim, 10),
         nn.ReLU(),
         nn.Linear(10, 15),
         nn.ReLU(),
         nn.Linear(15, dim),
-    ).to(device=x0.device, dtype=x0.dtype)
+    ).to(device=device, dtype=x0.dtype)
     grad_optimizer = Adam(gradient_network.parameters())
     taylor_loss = taylor_loss_klass(gradient_network)
     num_of_minibatch_to_train = int(2000 * math.sqrt(dim))
+    max_tuples = int(20_000 * math.floor(math.sqrt(dim)))
     egl = EGL(
         env=func,
         curr_point=x0,
         function_opt=optimizer,
-        epsilon=0.4 * math.sqrt(dim),
+        epsilon=0.8 * math.sqrt(dim),
         epsilon_factor=0.97,
         min_epsilon=1e-4,
         perturb=0,
@@ -53,23 +54,23 @@ def minimize(fun, x0, args=(), bounds=None, constraints=150_000, callback=None):
         database_type=PairsInEpsRangeDataset,
         dataset_parameters=lambda alg: {
             "epsilon": alg.epsilon,
-            "max_tuples": num_of_minibatch_to_train,
+            "max_tuples": max_tuples,
         },
-        weight_func=QuantileWeights() if use_weights else None,
+        weight_func=CMAWeights(dim, device, x0.dtype) if use_weights else None,
         taylor_loss=taylor_loss,
         trust_region=TanhTrustRegion(
             lower_bounds=torch.tensor(
-                [-func.lower_bound] * dim, device=x0.device, dtype=x0.dtype
+                [-func.lower_bound] * dim, device=device, dtype=x0.dtype
             ),
             upper_bounds=torch.tensor(
-                [func.lower_bound] * dim, device=x0.device, dtype=x0.dtype
+                [func.lower_bound] * dim, device=device, dtype=x0.dtype
             ),
         ),
         value_normalizer=AdaptedOutputUnconstrainedMapping(),
     )
 
     egl.train(
-        epochs=50_000,
+        epochs=constraints,
         exploration_size=int(8 * math.sqrt(dim)),
         num_loop_without_improvement=10,
         min_iteration_before_shrink=40,
