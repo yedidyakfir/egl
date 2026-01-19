@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bbo-egl"
-version = "1.0.0"
+version = "1.1.0"
 description = "A package of black-box optimization (BBO) algorithms."
 authors = ["Yedidya Kfir <yedidyakfir@gmail.com>"]
 readme = "README.md"
